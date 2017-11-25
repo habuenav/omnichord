@@ -40,10 +40,14 @@ typedef struct {
 } Channel;
 
 Channel channels[] = {
-  { C_3, TIMER_RESOLUTION },
+  { C_3, LONG_MAX },
   { E_3, LONG_MAX },
   { G_3, LONG_MAX },
-  { Bb3, LONG_MAX },
+  { A_3, LONG_MAX },
+  { C_4, LONG_MAX },
+  { E_4, LONG_MAX },
+  { G_4, LONG_MAX },
+  { A_4, LONG_MAX },
 };
 
 int numberOfChannels = sizeof(channels)/sizeof(Channel);
@@ -92,7 +96,6 @@ void loop()
  
   int output = PWM_SILENCE + sum;
   Timer1.pwm(PWM_PIN, output, PWM_PERIOD);
-
 }
 
 /*
