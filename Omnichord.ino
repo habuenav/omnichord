@@ -7,8 +7,9 @@ const int PWM_PERIOD = 8;
 const int PWM_MAX = 1023;
 const int PWM_SILENCE = 511;
 
-const int SAMPLE_FREQ = 8000; // Hz
-const float SAMPLES_PER_TICK = (float) SAMPLE_FREQ / TIMER_RESOLUTION;
+const int SAMPLING_FREQ = 8000; // Hz
+const float SAMPLE_FREQ = 130.81; // Hz (C-3)
+const float SAMPLES_PER_TICK = (float) SAMPLING_FREQ / TIMER_RESOLUTION;
 const int SAMPLE_MULTIPLIER = 4;
 const byte SAMPLE_SILENCE = 0;
 
@@ -22,11 +23,12 @@ typedef float Frequency;
 typedef struct {
   Frequency freq;
   Microseconds triggered;
-} Note;
+} Channel;
 
-Note notes[] = {
-  { 261.63, 1*TIMER_RESOLUTION },
-  { 261.63, 1.5*TIMER_RESOLUTION },
+Channel channels[] = {
+  { 130.81, 1*TIMER_RESOLUTION },
+  { 164.81, 1.5*TIMER_RESOLUTION },
+  { 261.62, 2*TIMER_RESOLUTION },
 };
 
 void setup() 
@@ -37,10 +39,11 @@ void setup()
   pinMode(SOFT_POT_PIN, INPUT);
 }
 
-char sampled(Microseconds time, int noteIndex) {
-  Note note = notes[noteIndex];
-  Microseconds currentSampleTime = time - note.triggered;
-  SampleIndex sampleIndex = currentSampleTime * SAMPLES_PER_TICK;
+char sampled(Microseconds time, int channelIndex) {
+  Channel channel = channels[channelIndex];
+  float samplesPerTick = channel.freq/SAMPLE_FREQ * SAMPLES_PER_TICK;
+  Microseconds currentSampleTime = time - channel.triggered;
+  SampleIndex sampleIndex = currentSampleTime * samplesPerTick;
   if (sampleIndex >= 0 && sampleIndex < SAMPLE_SIZE) {
     return pgm_read_byte_near(SAMPLE + sampleIndex);
   } else {
@@ -51,7 +54,7 @@ char sampled(Microseconds time, int noteIndex) {
 void loop() 
 {
  Microseconds t = micros();
- int sum = sampled(t, 0) + sampled(t, 1);
+ int sum = sampled(t, 0) + sampled(t, 2);
  int output = PWM_SILENCE + sum * SAMPLE_MULTIPLIER/2;
  Timer1.pwm(PWM_PIN, output, PWM_PERIOD);
 
