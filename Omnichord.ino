@@ -2,17 +2,31 @@
 #include "sample"
 
 const unsigned long TIMER_RESOLUTION = 1000000;
-const float PI2 = PI*2;
-const float PI2TIMER_RESOLUTION = PI*2/TIMER_RESOLUTION;
 const int PWM_PIN = 9;
 const int PWM_PERIOD = 8;
-const int WIDTH = 1023;
-const int MAX_AMPLITUDE = WIDTH / 2;
+const int PWM_MAX = 1023;
 
-const SAMPLE_FRQ = 8000; // Hz
+const int SAMPLE_FREQ = 8000; // Hz
+const float SAMPLES_PER_TICK = (float) SAMPLE_FREQ / TIMER_RESOLUTION;
+const int SAMPLE_MAX = 255;
+const int SAMPLE_MULTIPLIER = (PWM_MAX+1) / (SAMPLE_MAX+1);
+const byte SAMPLE_SILENCE = 127;
 
 const int SOFT_POT_PIN = A0;
 const int GRAPH_LENGTH = 60;
+
+typedef long SampleIndex;
+typedef long Microseconds;
+typedef float Frequency;
+
+typedef struct {
+  Frequency freq;
+  Microseconds triggered;
+} Note;
+
+Note notes[] = {
+  { 261.63, 1*TIMER_RESOLUTION }
+};
 
 void setup() 
 {
@@ -22,41 +36,23 @@ void setup()
   pinMode(SOFT_POT_PIN, INPUT);
 }
 
-
-void monitor(int i) {
-  Serial.println(i);
-  delay(100);
-}
-
-float pitchC = 261.63;
-float multiplierC = pitchC * PI2TIMER_RESOLUTION;
-
-float pitchE = 329.63;
-float multiplierE = pitchE * PI2TIMER_RESOLUTION;
-
-float pitchG = 392.00;
-float multiplierG = pitchG * PI2TIMER_RESOLUTION;
-
-float pitchBb = 466.16;
-float multiplierBb = pitchBb * PI2TIMER_RESOLUTION;
-
-float signal(long micros, float multiplier) {
-  return sin(micros * multiplier);
+byte sampled(Microseconds time, int noteIndex) {
+  Note note = notes[noteIndex];
+  Microseconds currentSampleTime = time - note.triggered;
+  SampleIndex sampleIndex = currentSampleTime * SAMPLES_PER_TICK;
+  if (sampleIndex >= 0 && sampleIndex < SAMPLE_SIZE) {
+    return pgm_read_byte_near(SAMPLE + sampleIndex);
+  } else {
+    return SAMPLE_SILENCE;
+  }
 }
 
 void loop() 
 {
-  byte x = sample[0];
-  long t = micros();
-  float v = 
-    signal(t, multiplierBb);
-
-  v = v/4;
-
-  int i = MAX_AMPLITUDE + (int) (v * MAX_AMPLITUDE);
-  Timer1.pwm(PWM_PIN, i, PWM_PERIOD);
-
-  monitor(i);
+ Microseconds t = micros();
+ byte b = sampled(t, 0);
+ int i = (int) b * SAMPLE_MULTIPLIER;
+ Timer1.pwm(PWM_PIN, i, PWM_PERIOD);
 
 //  int softPotADC = analogRead(SOFT_POT_PIN);
 //  int softPotPosition = map(softPotADC, 0, 1023, 0, GRAPH_LENGTH);
