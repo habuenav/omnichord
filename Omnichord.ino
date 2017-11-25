@@ -1,3 +1,4 @@
+#include "limits.h"
 #include "TimerOne.h"
 #include "sample"
 
@@ -13,7 +14,9 @@ const float SAMPLES_PER_TICK = (float) SAMPLING_FREQ / TIMER_RESOLUTION;
 const byte SAMPLE_SILENCE = 0;
 
 const int SOFT_POT_PIN = A0;
-const int GRAPH_LENGTH = 60;
+const int SOFT_POT_MAX = 1024;
+const int SOFT_POT_MIN = 64;
+const int SOFT_POT_RESOLUTION = SOFT_POT_MAX - SOFT_POT_MIN;
 
 typedef long SampleIndex;
 typedef long Microseconds;
@@ -27,18 +30,20 @@ typedef struct {
   float samplesPerTick;
 } Note;
 
-#import "notes"
+#include "notes"
 
 typedef struct {
   Note *note;
   Microseconds triggered;
+  int softPotMin;
+  int softPotMax;
 } Channel;
 
 Channel channels[] = {
-  { C_3, 1*TIMER_RESOLUTION },
-  { E_3, 1.5*TIMER_RESOLUTION },
-  { G_3, 2*TIMER_RESOLUTION },
-  { Bb3, 2.5*TIMER_RESOLUTION },
+  { C_3, TIMER_RESOLUTION },
+  { E_3, LONG_MAX },
+  { G_3, LONG_MAX },
+  { Bb3, LONG_MAX },
 };
 
 int numberOfChannels = sizeof(channels)/sizeof(Channel);
@@ -49,13 +54,17 @@ void setup()
 
   Serial.begin(9600);
   pinMode(SOFT_POT_PIN, INPUT);
+
+  float softPotStepsPerChannel = (float) SOFT_POT_RESOLUTION/numberOfChannels;
+  for(int i=0; i<numberOfChannels; i++) {
+    channels[i].softPotMin = SOFT_POT_MIN + i * softPotStepsPerChannel;
+    channels[i].softPotMax = channels[i].softPotMin + softPotStepsPerChannel;
+  }
 }
 
-char sampled(Microseconds time, int channelIndex) {
-  Channel channel = channels[channelIndex];
-
-  Microseconds currentSampleTime = time - channel.triggered;
-  SampleIndex sampleIndex = currentSampleTime * channel.note->samplesPerTick;
+char getSample(Channel *channel, Microseconds time) {
+  Microseconds currentSampleTime = time - channel->triggered;
+  SampleIndex sampleIndex = currentSampleTime * channel->note->samplesPerTick;
 
   if (sampleIndex >= 0 && sampleIndex < SAMPLE_SIZE) {
     return pgm_read_byte_near(SAMPLE + sampleIndex);
@@ -66,27 +75,24 @@ char sampled(Microseconds time, int channelIndex) {
 
 void loop() 
 {
+  int softPot = analogRead(SOFT_POT_PIN);
+
   Microseconds t = micros();
   int sum = 0;
- 
+
   for (int i=0; i<numberOfChannels; i++) {
-    sum += sampled(t, i);
+    Channel *channel = &channels[i];
+
+    if (softPot > channel->softPotMin && softPot < channel->softPotMax) {
+      channel->triggered = t;
+    }
+
+    sum += getSample(channel, t);
   }
  
   int output = PWM_SILENCE + sum;
   Timer1.pwm(PWM_PIN, output, PWM_PERIOD);
 
-//  int softPotADC = analogRead(SOFT_POT_PIN);
-//  int softPotPosition = map(softPotADC, 0, 1023, 0, GRAPH_LENGTH);
-//
-//  Serial.print("<"); // Starting end
-//  for (int i=0; i<GRAPH_LENGTH; i++) {
-//    if (i == softPotPosition) Serial.print("|");
-//    else Serial.print("-");
-//  }
-//  Serial.println("> (" + String(softPotADC) + ")");
-//
-//  delay(25);
 }
 
 /*
@@ -94,5 +100,4 @@ Connections:
 Pin 9 through potentiometer to speaker +
 Speaker GND to GDN
 */
-
 
