@@ -1,18 +1,23 @@
-void setup() {                
-  Serial.begin(9600);
+const int SOFT_POT_PIN = A0;
+const int GRAPH_LENGTH = 60;
 
-	pinMode(13, OUTPUT);     
+void setup() 
+{
+  Serial.begin(9600);
+  pinMode(SOFT_POT_PIN, INPUT);
 }
 
-void loop() {
-	digitalWrite(13, HIGH);
-	delay(1000);
-	digitalWrite(13, LOW);
-	delay(1000);
+void loop() 
+{
+  int softPotADC = analogRead(SOFT_POT_PIN);
+  int softPotPosition = map(softPotADC, 0, 1023, 0, GRAPH_LENGTH);
 
-  
-  if (Serial.available()) {
-    // Serial.println(Serial.read());
-    Serial.println(random(10));
+  Serial.print("<"); // Starting end
+  for (int i=0; i<GRAPH_LENGTH; i++) {
+    if (i == softPotPosition) Serial.print("|");
+    else Serial.print("-");
   }
+  Serial.println("> (" + String(softPotADC) + ")");
+
+  delay(25);
 }
