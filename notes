@@ -1,0 +1,51 @@
+Note notes[] = {
+  {samplesPerTick(130.81)}, // C-3
+  {samplesPerTick(138.59)},
+  {samplesPerTick(146.83)},
+  {samplesPerTick(155.56)},
+  {samplesPerTick(164.81)},
+  {samplesPerTick(174.61)},
+  {samplesPerTick(185.00)},
+  {samplesPerTick(196.00)},
+  {samplesPerTick(207.65)},
+  {samplesPerTick(220.00)},
+  {samplesPerTick(233.08)},
+  {samplesPerTick(246.94)},
+  {samplesPerTick(261.63)}, // C-4
+  {samplesPerTick(277.18)},
+  {samplesPerTick(293.66)},
+  {samplesPerTick(311.13)},
+  {samplesPerTick(329.63)},
+  {samplesPerTick(349.23)},
+  {samplesPerTick(369.99)},
+  {samplesPerTick(392.00)},
+  {samplesPerTick(415.30)},
+  {samplesPerTick(440.00)},
+  {samplesPerTick(466.16)},
+  {samplesPerTick(493.88)}, // B-4
+};
+
+Note *C_3 = &notes[0];
+Note *Db3 = &notes[1];
+Note *D_3 = &notes[2];
+Note *Eb3 = &notes[3];
+Note *E_3 = &notes[4];
+Note *F_3 = &notes[5];
+Note *Gb3 = &notes[6];
+Note *G_3 = &notes[7];
+Note *Ab3 = &notes[8];
+Note *A_3 = &notes[9];
+Note *Bb3 = &notes[10];
+Note *B_3 = &notes[11];
+Note *C_4 = &notes[12];
+Note *Db4 = &notes[13];
+Note *D_4 = &notes[14];
+Note *Eb4 = &notes[15];
+Note *E_4 = &notes[16];
+Note *F_4 = &notes[17];
+Note *Gb4 = &notes[18];
+Note *G_4 = &notes[19];
+Note *Ab4 = &notes[20];
+Note *A_4 = &notes[21];
+Note *Bb4 = &notes[22];
+Note *B_4 = &notes[23];
