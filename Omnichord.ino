@@ -5,12 +5,12 @@ const unsigned long TIMER_RESOLUTION = 1000000;
 const int PWM_PIN = 9;
 const int PWM_PERIOD = 8;
 const int PWM_MAX = 1023;
+const int PWM_SILENCE = 511;
 
 const int SAMPLE_FREQ = 8000; // Hz
 const float SAMPLES_PER_TICK = (float) SAMPLE_FREQ / TIMER_RESOLUTION;
-const int SAMPLE_MAX = 255;
-const int SAMPLE_MULTIPLIER = (PWM_MAX+1) / (SAMPLE_MAX+1);
-const byte SAMPLE_SILENCE = 127;
+const int SAMPLE_MULTIPLIER = 4;
+const byte SAMPLE_SILENCE = 0;
 
 const int SOFT_POT_PIN = A0;
 const int GRAPH_LENGTH = 60;
@@ -25,7 +25,8 @@ typedef struct {
 } Note;
 
 Note notes[] = {
-  { 261.63, 1*TIMER_RESOLUTION }
+  { 261.63, 1*TIMER_RESOLUTION },
+  { 261.63, 1.5*TIMER_RESOLUTION },
 };
 
 void setup() 
@@ -36,7 +37,7 @@ void setup()
   pinMode(SOFT_POT_PIN, INPUT);
 }
 
-byte sampled(Microseconds time, int noteIndex) {
+char sampled(Microseconds time, int noteIndex) {
   Note note = notes[noteIndex];
   Microseconds currentSampleTime = time - note.triggered;
   SampleIndex sampleIndex = currentSampleTime * SAMPLES_PER_TICK;
@@ -50,9 +51,9 @@ byte sampled(Microseconds time, int noteIndex) {
 void loop() 
 {
  Microseconds t = micros();
- byte b = sampled(t, 0);
- int i = (int) b * SAMPLE_MULTIPLIER;
- Timer1.pwm(PWM_PIN, i, PWM_PERIOD);
+ int sum = sampled(t, 0) + sampled(t, 1);
+ int output = PWM_SILENCE + sum * SAMPLE_MULTIPLIER/2;
+ Timer1.pwm(PWM_PIN, output, PWM_PERIOD);
 
 //  int softPotADC = analogRead(SOFT_POT_PIN);
 //  int softPotPosition = map(softPotADC, 0, 1023, 0, GRAPH_LENGTH);
