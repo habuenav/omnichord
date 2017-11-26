@@ -2,8 +2,10 @@
 #include "TimerOne.h"
 #include "sample"
 
+typedef int Pin;
+
 const unsigned long TIMER_RESOLUTION = 1000000;
-const int PWM_PIN = 9;
+const Pin PWM_PIN = 9;
 const int PWM_PERIOD = 8;
 const int PWM_MAX = 1023;
 const int PWM_SILENCE = 511;
@@ -51,29 +53,51 @@ Chord chords[] = {
 Chord *activeChord = &chords[0];
 
 typedef struct {
-  int softPotMin;
-  int softPotMax;
   Microseconds lastDebounceTime;
   TriggerState state;
   TriggerState previousState;
+} Pressable;
+
+typedef struct {
+  int softPotMin;
+  int softPotMax;
+  Pressable pressable;
 } Channel;
 
 const int numberOfChannels = 8;
 Channel channels[numberOfChannels];
 
-void setup() 
-{
+typedef struct {
+  Pin pin;
+  Pressable pressable;
+} Button;
+
+Button buttons[] = {
+  { 2 },
+};
+
+const int numberOfButtons = sizeof(buttons)/sizeof(Button);
+
+void initPressable(Pressable *pressable) {
+  pressable->lastDebounceTime = 0;
+  pressable->state = RELEASED;
+  pressable->previousState = RELEASED;
+}
+
+void setup() {
   Timer1.initialize();
 
   Serial.begin(9600);
   pinMode(SOFT_POT_PIN, INPUT);
 
+  for(int i=0; i<numberOfButtons; i++) {
+    initPressable(&(buttons[i].pressable));
+  }
+
   float softPotStepsPerChannel = (float) SOFT_POT_RESOLUTION/numberOfChannels;
   float triggerMargin = 1.0/6;
   for(int i=0; i<numberOfChannels; i++) {
-    channels[i].lastDebounceTime = 0;
-    channels[i].state = RELEASED;
-    channels[i].previousState = RELEASED;
+    initPressable(&(channels[i].pressable));
 
     channels[i].softPotMin = 1 + SOFT_POT_MIN + i * softPotStepsPerChannel + triggerMargin * softPotStepsPerChannel;
     channels[i].softPotMax = SOFT_POT_MIN + (i+1) * softPotStepsPerChannel - triggerMargin * softPotStepsPerChannel;
@@ -92,22 +116,37 @@ char getSample(Stringgg *string, Microseconds time) {
   }
 }
 
-void updateTrigger(Channel *channel, Stringgg *string, TriggerState state, Microseconds time) {
-  if (state != channel->previousState) {
-    channel->lastDebounceTime = time;
+boolean handlePressable(Pressable *pressable, TriggerState state, Microseconds time) {
+  TriggerState wasJustPressed = false;
+
+  if (state != pressable->previousState) {
+    pressable->lastDebounceTime = time;
   }
 
-  if ((time - channel->lastDebounceTime) > DEBOUNCE_DELAY) {
-    if (state != channel->state) {
-      if ((state == PRESSED) && (channel->state == RELEASED)) {
-        string->triggered = time;
-        string->isRinging = true;
+  if ((time - pressable->lastDebounceTime) > DEBOUNCE_DELAY) {
+    if (state != pressable->state) {
+      if ((state == PRESSED) && (pressable->state == RELEASED)) {
+        wasJustPressed = true;
       }
-      channel->state = state;
+      pressable->state = state;
     }
   }
 
-  channel->previousState = state;
+  pressable->previousState = state;
+  return wasJustPressed;
+}
+
+void updateTrigger(Channel *channel, Stringgg *string, TriggerState state, Microseconds time) {
+  if (handlePressable(&channel->pressable, state, time)) {
+    string->triggered = time;
+    string->isRinging = true;
+  }
+}
+
+void updateButton(Button *button, Microseconds time) {
+  TriggerState state = digitalRead(button->pin);
+
+  handlePressable(&(button->pressable), state, time);
 }
 
 void loop() 
@@ -116,6 +155,16 @@ void loop()
 
   Microseconds t = micros();
   int sum = 0;
+
+  for (int i=0; i<numberOfButtons; i++) {
+    updateButton(&buttons[i], t);
+  }
+
+  if (buttons[0].pressable.state == PRESSED) {
+    activeChord = &chords[1];
+  } else {
+    activeChord = &chords[0];
+  }
 
   for (int i=0; i<numberOfChannels; i++) {
     Channel *channel = &channels[i];
@@ -128,12 +177,6 @@ void loop()
     }
   }
 
-  if (t % (2*TIMER_RESOLUTION) > TIMER_RESOLUTION) {
-    activeChord = &chords[1];
-  } else {
-    activeChord = &chords[0];
-  }
- 
   for (int i=0; i<numberOfStrings; i++) {
     Stringgg *string = &strings[i];
 
