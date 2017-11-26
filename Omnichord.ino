@@ -15,12 +15,19 @@ const byte SAMPLE_SILENCE = 0;
 
 const int SOFT_POT_PIN = A0;
 const int SOFT_POT_MAX = 1024;
-const int SOFT_POT_MIN = 64;
+const int SOFT_POT_MIN = 0;
 const int SOFT_POT_RESOLUTION = SOFT_POT_MAX - SOFT_POT_MIN;
 
-typedef long SampleIndex;
+typedef int TriggerState;
+static const TriggerState PRESSED  = HIGH;
+static const TriggerState RELEASED = LOW;
+
 typedef long Microseconds;
+static const Microseconds DEBOUNCE_DELAY = 3000;
+
+typedef long SampleIndex;
 typedef float Frequency;
+
 
 float samplesPerTick(float freq) {
   return freq/SAMPLE_FREQ * SAMPLES_PER_TICK;
@@ -37,6 +44,9 @@ typedef struct {
   Microseconds triggered;
   int softPotMin;
   int softPotMax;
+  Microseconds lastDebounceTime;
+  TriggerState state;
+  TriggerState previousState;
 } Channel;
 
 Channel channels[] = {
@@ -60,9 +70,15 @@ void setup()
   pinMode(SOFT_POT_PIN, INPUT);
 
   float softPotStepsPerChannel = (float) SOFT_POT_RESOLUTION/numberOfChannels;
+  float triggerMargin = 1.0/6;
   for(int i=0; i<numberOfChannels; i++) {
-    channels[i].softPotMin = SOFT_POT_MIN + i * softPotStepsPerChannel;
-    channels[i].softPotMax = channels[i].softPotMin + softPotStepsPerChannel;
+    channels[i].softPotMin = 1 + SOFT_POT_MIN + i * softPotStepsPerChannel + triggerMargin * softPotStepsPerChannel;
+    channels[i].softPotMax = SOFT_POT_MIN + (i+1) * softPotStepsPerChannel - triggerMargin * softPotStepsPerChannel;
+//    Serial.print(channels[i].softPotMin);
+//    Serial.print(" ");
+//    Serial.print(channels[i].softPotMax);
+//    Serial.print(" ");
+//    Serial.println(channels[i].softPotMax - channels[i].softPotMin);
   }
 }
 
@@ -77,6 +93,23 @@ char getSample(Channel *channel, Microseconds time) {
   }
 }
 
+void updateTrigger(Channel *channel, TriggerState state, Microseconds time) {
+  if (state != channel->previousState) {
+    channel->lastDebounceTime = time;
+  }
+
+  if ((time - channel->lastDebounceTime) > DEBOUNCE_DELAY) {
+    if (state != channel->state) {
+      if ((state == PRESSED) && (channel->state == RELEASED)) {
+        channel->triggered = time;
+      }
+      channel->state = state;
+    }
+  }
+
+  channel->previousState = state;
+}
+
 void loop() 
 {
   int softPot = analogRead(SOFT_POT_PIN);
@@ -87,8 +120,10 @@ void loop()
   for (int i=0; i<numberOfChannels; i++) {
     Channel *channel = &channels[i];
 
-    if (softPot > channel->softPotMin && softPot < channel->softPotMax) {
-      channel->triggered = t;
+    if (softPot >= channel->softPotMin && softPot < channel->softPotMax) {
+      updateTrigger(channel, PRESSED, t);
+    } else {
+      updateTrigger(channel, RELEASED, t);
     }
 
     sum += getSample(channel, t);
