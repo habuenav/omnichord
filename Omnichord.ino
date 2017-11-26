@@ -41,13 +41,16 @@ typedef struct {
 
 #include "strings"
 
+typedef Stringgg *Chord[8];
+
+Chord chords[] = {
+  { C_3, E_3, G_3, A_3, C_4, E_4, G_4, A_4 },
+  { F_3, A_3, C_3, Eb3, F_4, A_4, C_4, Eb4 },
+};
+
+Chord *activeChord = &chords[0];
+
 typedef struct {
-  Stringgg *string;
-  Microseconds triggered;
-  boolean isRinging;
-
-//  Stringgg *string;
-
   int softPotMin;
   int softPotMax;
   Microseconds lastDebounceTime;
@@ -55,18 +58,8 @@ typedef struct {
   TriggerState previousState;
 } Channel;
 
-Channel channels[] = {
-  { C_3 },
-  { E_3 },
-  { G_3 },
-  { A_3 },
-  { C_4 },
-  { E_4 },
-  { G_4 },
-  { A_4 },
-};
-
-int numberOfChannels = sizeof(channels)/sizeof(Channel);
+const int numberOfChannels = 8;
+Channel channels[numberOfChannels];
 
 void setup() 
 {
@@ -78,35 +71,28 @@ void setup()
   float softPotStepsPerChannel = (float) SOFT_POT_RESOLUTION/numberOfChannels;
   float triggerMargin = 1.0/6;
   for(int i=0; i<numberOfChannels; i++) {
-    channels[i].triggered = LONG_MAX;
     channels[i].lastDebounceTime = 0;
     channels[i].state = RELEASED;
     channels[i].previousState = RELEASED;
-    channels[i].isRinging = false;
 
     channels[i].softPotMin = 1 + SOFT_POT_MIN + i * softPotStepsPerChannel + triggerMargin * softPotStepsPerChannel;
     channels[i].softPotMax = SOFT_POT_MIN + (i+1) * softPotStepsPerChannel - triggerMargin * softPotStepsPerChannel;
-//    Serial.print(channels[i].softPotMin);
-//    Serial.print(" ");
-//    Serial.print(channels[i].softPotMax);
-//    Serial.print(" ");
-//    Serial.println(channels[i].softPotMax - channels[i].softPotMin);
   }
 }
 
-char getSample(Channel *channel, Microseconds time) {
-  Microseconds currentSampleTime = time - channel->triggered;
-  SampleIndex sampleIndex = currentSampleTime * channel->string->samplesPerTick;
+char getSample(Stringgg *string, Microseconds time) {
+  Microseconds currentSampleTime = time - string->triggered;
+  SampleIndex sampleIndex = currentSampleTime * string->samplesPerTick;
 
   if (sampleIndex < SAMPLE_SIZE) {
     return pgm_read_byte_near(SAMPLE + sampleIndex);
   } else {
-    channel->isRinging = false;
+    string->isRinging = false;
     return SAMPLE_SILENCE;
   }
 }
 
-void updateTrigger(Channel *channel, TriggerState state, Microseconds time) {
+void updateTrigger(Channel *channel, Stringgg *string, TriggerState state, Microseconds time) {
   if (state != channel->previousState) {
     channel->lastDebounceTime = time;
   }
@@ -114,8 +100,8 @@ void updateTrigger(Channel *channel, TriggerState state, Microseconds time) {
   if ((time - channel->lastDebounceTime) > DEBOUNCE_DELAY) {
     if (state != channel->state) {
       if ((state == PRESSED) && (channel->state == RELEASED)) {
-        channel->triggered = time;
-        channel->isRinging = true;
+        string->triggered = time;
+        string->isRinging = true;
       }
       channel->state = state;
     }
@@ -133,25 +119,29 @@ void loop()
 
   for (int i=0; i<numberOfChannels; i++) {
     Channel *channel = &channels[i];
+    Stringgg *string = (*activeChord)[i];
 
     if (softPot >= channel->softPotMin && softPot < channel->softPotMax) {
-      updateTrigger(channel, PRESSED, t);
+      updateTrigger(channel, string, PRESSED, t);
     } else {
-      updateTrigger(channel, RELEASED, t);
+      updateTrigger(channel, string, RELEASED, t);
     }
+  }
 
-    if (channel->isRinging) {
-      sum += getSample(channel, t);
+  if (t % (2*TIMER_RESOLUTION) > TIMER_RESOLUTION) {
+    activeChord = &chords[1];
+  } else {
+    activeChord = &chords[0];
+  }
+ 
+  for (int i=0; i<numberOfStrings; i++) {
+    Stringgg *string = &strings[i];
+
+    if (string->isRinging) {
+      sum += getSample(string, t);
     }
   }
  
   int output = PWM_SILENCE + sum;
   Timer1.pwm(PWM_PIN, output, PWM_PERIOD);
 }
-
-/*
-Connections:
-Pin 9 through potentiometer to speaker +
-Speaker GND to GDN
-*/
-

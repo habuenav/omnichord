@@ -25,6 +25,8 @@ Stringgg strings[] = {
   {samplesPerTick(493.88), 0, false},
 };
 
+const int numberOfStrings = sizeof(strings)/sizeof(Stringgg);
+
 Stringgg *C_3 = &strings[0];
 Stringgg *Db3 = &strings[1];
 Stringgg *D_3 = &strings[2];
