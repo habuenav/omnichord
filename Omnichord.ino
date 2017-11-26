@@ -35,19 +35,24 @@ float samplesPerTick(float freq) {
 
 typedef struct {
   float samplesPerTick;
-} Note;
+  Microseconds triggered;
+  boolean isRinging;
+} Stringgg;
 
-#include "notes"
+#include "strings"
 
 typedef struct {
-  Note *note;
+  Stringgg *string;
   Microseconds triggered;
+  boolean isRinging;
+
+//  Stringgg *string;
+
   int softPotMin;
   int softPotMax;
   Microseconds lastDebounceTime;
   TriggerState state;
   TriggerState previousState;
-  boolean isRinging;
 } Channel;
 
 Channel channels[] = {
@@ -91,7 +96,7 @@ void setup()
 
 char getSample(Channel *channel, Microseconds time) {
   Microseconds currentSampleTime = time - channel->triggered;
-  SampleIndex sampleIndex = currentSampleTime * channel->note->samplesPerTick;
+  SampleIndex sampleIndex = currentSampleTime * channel->string->samplesPerTick;
 
   if (sampleIndex < SAMPLE_SIZE) {
     return pgm_read_byte_near(SAMPLE + sampleIndex);
@@ -129,9 +134,6 @@ void loop()
   for (int i=0; i<numberOfChannels; i++) {
     Channel *channel = &channels[i];
 
-    Serial.print(channel->isRinging);
-    Serial.print(" ");
-
     if (softPot >= channel->softPotMin && softPot < channel->softPotMax) {
       updateTrigger(channel, PRESSED, t);
     } else {
@@ -142,7 +144,6 @@ void loop()
       sum += getSample(channel, t);
     }
   }
-  Serial.println();
  
   int output = PWM_SILENCE + sum;
   Timer1.pwm(PWM_PIN, output, PWM_PERIOD);
