@@ -48,6 +48,7 @@ typedef Stringgg *Chord[8];
 Chord chords[] = {
   { C_3, E_3, G_3, A_3, C_4, E_4, G_4, A_4 },
   { F_3, A_3, C_3, Eb3, F_4, A_4, C_4, Eb4 },
+  { G_3, B_3, C_3, F_3, G_4, B_4, D_4, F_4 },
 };
 
 Chord *activeChord = &chords[0];
@@ -74,6 +75,7 @@ typedef struct {
 
 Button buttons[] = {
   { 2 },
+  { 3 },
 };
 
 const int numberOfButtons = sizeof(buttons)/sizeof(Button);
@@ -163,7 +165,11 @@ void loop()
   if (buttons[0].pressable.state == PRESSED) {
     activeChord = &chords[1];
   } else {
-    activeChord = &chords[0];
+    if (buttons[1].pressable.state == PRESSED) {
+      activeChord = &chords[2];
+    } else {
+      activeChord = &chords[0];
+    }
   }
 
   for (int i=0; i<numberOfChannels; i++) {
