@@ -47,8 +47,8 @@ typedef Stringgg *Chord[8];
 
 Chord chords[] = {
   { C_3, E_3, G_3, A_3, C_4, E_4, G_4, A_4 },
-  { F_3, A_3, C_3, Eb3, F_4, A_4, C_4, Eb4 },
-  { G_3, B_3, C_3, F_3, G_4, B_4, D_4, F_4 },
+  { F_3, A_3, C_4, Eb4, F_4, A_4, C_5, Eb5 },
+  { G_3, B_3, C_4, F_4, G_4, B_4, D_5, F_5 },
 };
 
 Chord *activeChord = &chords[0];

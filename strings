@@ -23,6 +23,18 @@ Stringgg strings[] = {
   {samplesPerTick(440.00), 0, false},
   {samplesPerTick(466.16), 0, false},
   {samplesPerTick(493.88), 0, false},
+  {samplesPerTick(523.25), 0, false},
+  {samplesPerTick(554.37), 0, false},
+  {samplesPerTick(587.33), 0, false},
+  {samplesPerTick(622.25), 0, false},
+  {samplesPerTick(659.25), 0, false},
+  {samplesPerTick(698.46), 0, false},
+  {samplesPerTick(739.99), 0, false},
+  {samplesPerTick(783.99), 0, false},
+  {samplesPerTick(830.61), 0, false},
+  {samplesPerTick(880.00), 0, false},
+  {samplesPerTick(932.33), 0, false},
+  {samplesPerTick(987.77), 0, false},
 };
 
 const int numberOfStrings = sizeof(strings)/sizeof(Stringgg);
@@ -51,3 +63,15 @@ Stringgg *Ab4 = &strings[20];
 Stringgg *A_4 = &strings[21];
 Stringgg *Bb4 = &strings[22];
 Stringgg *B_4 = &strings[23];
+Stringgg *C_5 = &strings[24];
+Stringgg *Db5 = &strings[25];
+Stringgg *D_5 = &strings[26];
+Stringgg *Eb5 = &strings[27];
+Stringgg *E_5 = &strings[28];
+Stringgg *F_5 = &strings[29];
+Stringgg *Gb5 = &strings[30];
+Stringgg *G_5 = &strings[31];
+Stringgg *Ab5 = &strings[32];
+Stringgg *A_5 = &strings[33];
+Stringgg *Bb5 = &strings[34];
+Stringgg *B_5 = &strings[35];
