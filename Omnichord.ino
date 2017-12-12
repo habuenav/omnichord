@@ -4,7 +4,7 @@
 
 typedef int Pin;
 
-const unsigned long TIMER_RESOLUTION = 1000000;
+const signed long TIMER_RESOLUTION = 1000000;
 const Pin PWM_PIN = 9;
 const int PWM_PERIOD = 8;
 const int PWM_MAX = 1023;
@@ -151,15 +151,29 @@ void updateButton(Button *button, Microseconds time) {
   handlePressable(&(button->pressable), state, time);
 }
 
+unsigned long loopCounter = 0;
+Microseconds timer = 0;
+Microseconds previousTime = 0;
+
 void loop() 
 {
-  int softPot = analogRead(SOFT_POT_PIN);
+  Microseconds time = micros();
 
-  Microseconds t = micros();
-  int sum = 0;
+  if (timer >= TIMER_RESOLUTION) {
+    Serial.println(loopCounter);
+    loopCounter = 0;
+    timer = 0;
+  } else {
+    loopCounter += 1;
+    timer += (time - previousTime);
+    previousTime = time; 
+  }
+
+  int softPot = analogRead(SOFT_POT_PIN);
+//  int softPot = 32;
 
   for (int i=0; i<numberOfButtons; i++) {
-    updateButton(&buttons[i], t);
+    updateButton(&buttons[i], time);
   }
 
   if (buttons[0].pressable.state == PRESSED) {
@@ -177,17 +191,18 @@ void loop()
     Stringgg *string = (*activeChord)[i];
 
     if (softPot >= channel->softPotMin && softPot < channel->softPotMax) {
-      updateTrigger(channel, string, PRESSED, t);
+      updateTrigger(channel, string, PRESSED, time);
     } else {
-      updateTrigger(channel, string, RELEASED, t);
+      updateTrigger(channel, string, RELEASED, time);
     }
   }
 
+  int sum = 0;
   for (int i=0; i<numberOfStrings; i++) {
     Stringgg *string = &strings[i];
 
     if (string->isRinging) {
-      sum += getSample(string, t);
+      sum += getSample(string, time);
     }
   }
  
