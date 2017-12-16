@@ -54,7 +54,7 @@ Chord chords[] = {
   { G_3, B_3, C_4, F_4, G_4, B_4, D_5, F_5 },
 };
 
-Chord *activeChord = &chords[0];
+volatile Chord *activeChord = &chords[0];
 
 typedef struct {
   Microseconds lastDebounceTime;
@@ -208,9 +208,6 @@ void loop()
   }
 
   int softPot = analogRead(SOFT_POT_PIN);
-  //  int softPot = 32;
-
-//  buttonStateChangeHandler();
 
   for (int i=0; i<numberOfChannels; i++) {
     Channel *channel = &channels[i];
