@@ -111,7 +111,7 @@ boolean handlePressable(Pressable *pressable, TriggerState state, Microseconds t
   return wasJustPressed;
 }
 
-boolean updateButton(Button *button) {
+void updateButton(Button *button) {
   TriggerState state = digitalRead(button->pin);
 
   if (state != button->pressable.state) {
@@ -189,6 +189,21 @@ void updateTrigger(Channel *channel, Stringgg *string, TriggerState state, Micro
   }
 }
 
+void updateStrings(Microseconds time) {
+  int softPot = analogRead(SOFT_POT_PIN);
+
+  for (int i=0; i<numberOfChannels; i++) {
+    Channel *channel = &channels[i];
+    Stringgg *string = (*activeChord)[i];
+
+    if (softPot >= channel->softPotMin && softPot < channel->softPotMax) {
+      updateTrigger(channel, string, PRESSED, time);
+    } else {
+      updateTrigger(channel, string, RELEASED, time);
+    }
+  }
+}
+
 unsigned long loopCounter = 0;
 Microseconds timer = 0;
 Microseconds previousTime = 0;
@@ -207,17 +222,13 @@ void loop()
     previousTime = time; 
   }
 
-  int softPot = analogRead(SOFT_POT_PIN);
+//  updateStrings(time);
 
-  for (int i=0; i<numberOfChannels; i++) {
-    Channel *channel = &channels[i];
-    Stringgg *string = (*activeChord)[i];
-
-    if (softPot >= channel->softPotMin && softPot < channel->softPotMax) {
-      updateTrigger(channel, string, PRESSED, time);
-    } else {
-      updateTrigger(channel, string, RELEASED, time);
-    }
+  int stringIndex = (time / TIMER_RESOLUTION) % numberOfChannels;
+  Stringgg *string = (*activeChord)[stringIndex];
+  if (string->isRinging == false) {
+    string->triggered = time;
+    string->isRinging = true;
   }
 
   int sum = 0;
