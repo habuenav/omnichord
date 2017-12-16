@@ -20,6 +20,9 @@ const int SOFT_POT_MAX = 1024;
 const int SOFT_POT_MIN = 0;
 const int SOFT_POT_RESOLUTION = SOFT_POT_MAX - SOFT_POT_MIN;
 
+const int BUTTON1_PIN = 2;
+const int BUTTON2_PIN = 3;
+
 typedef int TriggerState;
 static const TriggerState PRESSED  = HIGH;
 static const TriggerState RELEASED = LOW;
@@ -74,8 +77,8 @@ typedef struct {
 } Button;
 
 Button buttons[] = {
-  { 2 },
-  { 3 },
+  { BUTTON1_PIN },
+  { BUTTON2_PIN },
 };
 
 const int numberOfButtons = sizeof(buttons)/sizeof(Button);
@@ -86,37 +89,7 @@ void initPressable(Pressable *pressable) {
   pressable->previousState = RELEASED;
 }
 
-void setup() {
-  Timer1.initialize();
-
-  Serial.begin(9600);
-  pinMode(SOFT_POT_PIN, INPUT);
-
-  for(int i=0; i<numberOfButtons; i++) {
-    initPressable(&(buttons[i].pressable));
-  }
-
-  float softPotStepsPerChannel = (float) SOFT_POT_RESOLUTION/numberOfChannels;
-  float triggerMargin = 1.0/6;
-  for(int i=0; i<numberOfChannels; i++) {
-    initPressable(&(channels[i].pressable));
-
-    channels[i].softPotMin = 1 + SOFT_POT_MIN + i * softPotStepsPerChannel + triggerMargin * softPotStepsPerChannel;
-    channels[i].softPotMax = SOFT_POT_MIN + (i+1) * softPotStepsPerChannel - triggerMargin * softPotStepsPerChannel;
-  }
-}
-
-char getSample(Stringgg *string, Microseconds time) {
-  Microseconds currentSampleTime = time - string->triggered;
-  SampleIndex sampleIndex = currentSampleTime * string->samplesPerTick;
-
-  if (sampleIndex < SAMPLE_SIZE) {
-    return pgm_read_byte_near(SAMPLE + sampleIndex);
-  } else {
-    string->isRinging = false;
-    return SAMPLE_SILENCE;
-  }
-}
+volatile Microseconds time;
 
 boolean handlePressable(Pressable *pressable, TriggerState state, Microseconds time) {
   TriggerState wasJustPressed = false;
@@ -138,17 +111,82 @@ boolean handlePressable(Pressable *pressable, TriggerState state, Microseconds t
   return wasJustPressed;
 }
 
+boolean updateButton(Button *button) {
+  TriggerState state = digitalRead(button->pin);
+
+  if (state != button->pressable.state) {
+    if (state == PRESSED) {
+      button->pressable.state = PRESSED;
+    } else {
+      button->pressable.state = RELEASED;
+    }
+  }
+}
+
+void updateChords() {
+  if (buttons[0].pressable.state == PRESSED) {
+    activeChord = &chords[1];
+  } else {
+    if (buttons[1].pressable.state == PRESSED) {
+      activeChord = &chords[2];
+    } else {
+      activeChord = &chords[0];
+    }
+  }
+}
+
+void button1ChangeHandler() {
+  updateButton(&buttons[0]);
+  updateChords();
+}
+
+void button2ChangeHandler() {
+  updateButton(&buttons[1]);
+  updateChords();
+}
+
+void setup() {
+  Timer1.initialize();
+
+  Serial.begin(9600);
+  pinMode(SOFT_POT_PIN, INPUT);
+
+  for(int i=0; i<numberOfButtons; i++) {
+    initPressable(&(buttons[i].pressable));
+  }
+
+  float softPotStepsPerChannel = (float) SOFT_POT_RESOLUTION/numberOfChannels;
+  float triggerMargin = 1.0/6;
+  for(int i=0; i<numberOfChannels; i++) {
+    initPressable(&(channels[i].pressable));
+
+    channels[i].softPotMin = 1 + SOFT_POT_MIN + i * softPotStepsPerChannel + triggerMargin * softPotStepsPerChannel;
+    channels[i].softPotMax = SOFT_POT_MIN + (i+1) * softPotStepsPerChannel - triggerMargin * softPotStepsPerChannel;
+  }
+
+  pinMode(BUTTON1_PIN, INPUT);
+  pinMode(BUTTON2_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUTTON1_PIN), button1ChangeHandler, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(BUTTON2_PIN), button2ChangeHandler, CHANGE);
+}
+
+char getSample(Stringgg *string, Microseconds time) {
+  Microseconds currentSampleTime = time - string->triggered;
+  SampleIndex sampleIndex = currentSampleTime * string->samplesPerTick;
+
+  if (sampleIndex < SAMPLE_SIZE) {
+    return pgm_read_byte_near(SAMPLE + sampleIndex);
+  } else {
+    string->isRinging = false;
+    return SAMPLE_SILENCE;
+  }
+}
+
 void updateTrigger(Channel *channel, Stringgg *string, TriggerState state, Microseconds time) {
   if (handlePressable(&channel->pressable, state, time)) {
     string->triggered = time;
     string->isRinging = true;
   }
-}
-
-void updateButton(Button *button, Microseconds time) {
-  TriggerState state = digitalRead(button->pin);
-
-  handlePressable(&(button->pressable), state, time);
 }
 
 unsigned long loopCounter = 0;
@@ -157,7 +195,7 @@ Microseconds previousTime = 0;
 
 void loop() 
 {
-  Microseconds time = micros();
+  time = micros();
 
   if (timer >= TIMER_RESOLUTION) {
     Serial.println(loopCounter);
@@ -170,21 +208,9 @@ void loop()
   }
 
   int softPot = analogRead(SOFT_POT_PIN);
-//  int softPot = 32;
+  //  int softPot = 32;
 
-  for (int i=0; i<numberOfButtons; i++) {
-    updateButton(&buttons[i], time);
-  }
-
-  if (buttons[0].pressable.state == PRESSED) {
-    activeChord = &chords[1];
-  } else {
-    if (buttons[1].pressable.state == PRESSED) {
-      activeChord = &chords[2];
-    } else {
-      activeChord = &chords[0];
-    }
-  }
+//  buttonStateChangeHandler();
 
   for (int i=0; i<numberOfChannels; i++) {
     Channel *channel = &channels[i];
