@@ -208,6 +208,8 @@ unsigned long loopCounter = 0;
 Microseconds timer = 0;
 Microseconds previousTime = 0;
 
+int previousStringIndex = -1;
+
 void loop() 
 {
   time = micros();
@@ -224,11 +226,12 @@ void loop()
 
 //  updateStrings(time);
 
-  int stringIndex = (time / TIMER_RESOLUTION) % numberOfChannels;
-  Stringgg *string = (*activeChord)[stringIndex];
-  if (string->isRinging == false) {
+  int stringIndex = (time / (TIMER_RESOLUTION/3)) % numberOfChannels;
+  if (stringIndex != previousStringIndex) {
+    Stringgg *string = (*activeChord)[stringIndex];
     string->triggered = time;
     string->isRinging = true;
+    previousStringIndex = stringIndex;
   }
 
   int sum = 0;
