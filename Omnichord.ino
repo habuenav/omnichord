@@ -204,11 +204,21 @@ void updateStrings(Microseconds time) {
   }
 }
 
+int previousStringIndex = -1;
+
+void autoTriggerStrings(Microseconds time) {
+  int stringIndex = (time / (TIMER_RESOLUTION/3)) % numberOfChannels;
+  if (stringIndex != previousStringIndex) {
+    Stringgg *string = (*activeChord)[stringIndex];
+    string->triggered = time;
+    string->isRinging = true;
+    previousStringIndex = stringIndex;
+  }
+}
+
 unsigned long loopCounter = 0;
 Microseconds timer = 0;
 Microseconds previousTime = 0;
-
-int previousStringIndex = -1;
 
 void loop() 
 {
@@ -224,15 +234,9 @@ void loop()
     previousTime = time; 
   }
 
-//  updateStrings(time);
+  updateStrings(time);
 
-  int stringIndex = (time / (TIMER_RESOLUTION/3)) % numberOfChannels;
-  if (stringIndex != previousStringIndex) {
-    Stringgg *string = (*activeChord)[stringIndex];
-    string->triggered = time;
-    string->isRinging = true;
-    previousStringIndex = stringIndex;
-  }
+//  autoTriggerStrings(time);
 
   int sum = 0;
   for (int i=0; i<numberOfStrings; i++) {
